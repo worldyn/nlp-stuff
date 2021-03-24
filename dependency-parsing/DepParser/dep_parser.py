@@ -1,6 +1,8 @@
 from pathlib import Path
 from parse_dataset import Dataset
 import argparse
+import sys
+
 
 class Parser: 
     SH, LA, RA = 0,1,2
@@ -55,8 +57,11 @@ class Parser:
                 if m not in self.valid_moves(i,stack,pred_tree) :
                     print( "Illegal move" )
                     continue
+            except KeyboardInterrupt:
+                sys.exit()
             except :
                 print( "Illegal move" )
+
                 continue
             i, stack, pred_tree = self.move(i,stack,pred_tree,m)
             if i == len(w) and stack == [0] :
@@ -98,13 +103,26 @@ class Parser:
             The list of valid moves for the specified parser
                 configuration.
         """
+        #SH, LA, RA = 0,1,2
+        #print("ääääääää")
+        #print("buffer idx ", i)
+        #print("stack: ", stack)
+
         moves = []
 
         # YOUR CODE HERE
+        numwords = len(pred_tree)
+        if i < numwords:
+            moves.append(0)
+        if len(stack) > 1:
+            moves.append(2)
+        if len(stack) > 2:
+            #if stack[-2] = 
+            moves.append(1) # so we don't put dependency to ROOT
         
         return moves
-
         
+
     def move(self, i, stack, pred_tree, move):
         """
         Executes a single move.
@@ -123,6 +141,19 @@ class Parser:
         """
 
         # YOUR CODE HERE
+        # SH, LA, RA = 0,1,2
+    
+        if move == 0: # SH
+            stack.append(i)
+            i += 1
+        elif move == 1: # LA
+            right = stack.pop()
+            left = stack.pop()
+            pred_tree[left] = right
+            stack.append(right)
+        elif move == 2: # RA
+            right = stack.pop()
+            pred_tree[right] = stack[-1]
 
         return i, stack, pred_tree
 
@@ -132,13 +163,25 @@ class Parser:
         Computes the sequence of moves (transformations) the parser 
         must perform in order to produce the input tree.
         """
-        i, stack, pred_tree = 0, [], [0]*len(tree) # Input configuration
+
+        print("TREE: ", tree)
+        i, stack, pred_tree = 0, [], [] # Input configuration
+        # init pred_tree to 0s
+        for _ in range(len(tree)):
+            pred_tree.append(0)
+
         moves = []
         m = self.compute_correct_move(i,stack,pred_tree,tree)
         while m != None :
             moves.append(m)
             i,stack,pred_tree = self.move(i,stack,pred_tree,m)
             m = self.compute_correct_move(i,stack,pred_tree,tree)
+        print("PREDICTED TREE: ", pred_tree)
+        print("MOVES: ", moves)
+        if pred_tree != tree:
+            print("NOT EQUAL!!!!!")
+            sys.exit()
+        print("-------")
         return moves
 
 
@@ -164,6 +207,27 @@ class Parser:
         assert len(pred_tree) == len(correct_tree)
 
         # YOUR CODE HERE
+        #SH, LA, RA = 0,1,2
+        valids = self.valid_moves(i, stack, pred_tree)
+        N = len(pred_tree)
+
+        if len(stack) >= 2:
+            left = stack[-2]
+            right = stack[-1]
+
+            if 1 in valids and correct_tree[left] == right:
+                return 1
+
+            if 2 in valids and correct_tree[right] == left:
+                nodep = True
+                for idx in range(i, N):
+                    if correct_tree[idx] == right:
+                        nodep = False
+                if nodep:
+                    return 2
+
+        if i < N and 0 in valids:
+            return 0
 
         return None
    
@@ -171,7 +235,11 @@ class Parser:
   
 filename = Path("en-ud-train-projective.conllu")
 
+
 if __name__ == '__main__':
+    global TREE_NUM
+    TREE_NUM = 0
+
     parser = argparse.ArgumentParser(description='Transition-based dependency parser')
     parser.add_argument('-s', '--step_by_step', type=str, help='step-by-step parsing of a string')
     parser.add_argument('-m', '--compute_correct_moves', type=str, default=filename, help='compute the correct moves given a correct tree')
@@ -184,7 +252,9 @@ if __name__ == '__main__':
     elif args.compute_correct_moves:
         with open(args.compute_correct_moves) as source:
             for w,tags,tree,relations in p.trees(source) :
+                print("TREE_NUM=",TREE_NUM)
                 print( p.compute_correct_moves(tree) )
+                TREE_NUM += 1
 
 
 
