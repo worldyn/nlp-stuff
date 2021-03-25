@@ -2,6 +2,7 @@ from pathlib import Path
 from parse_dataset import Dataset
 import argparse
 import sys
+import json
 
 
 class Parser: 
@@ -164,7 +165,7 @@ class Parser:
         must perform in order to produce the input tree.
         """
 
-        print("TREE: ", tree)
+        #print("TREE: ", tree)
         i, stack, pred_tree = 0, [], [] # Input configuration
         # init pred_tree to 0s
         for _ in range(len(tree)):
@@ -176,12 +177,12 @@ class Parser:
             moves.append(m)
             i,stack,pred_tree = self.move(i,stack,pred_tree,m)
             m = self.compute_correct_move(i,stack,pred_tree,tree)
-        print("PREDICTED TREE: ", pred_tree)
-        print("MOVES: ", moves)
-        if pred_tree != tree:
-            print("NOT EQUAL!!!!!")
-            sys.exit()
-        print("-------")
+        #print("PREDICTED TREE: ", pred_tree)
+        #print("MOVES: ", moves)
+        #if pred_tree != tree:
+            #print("NOT EQUAL!!!!!")
+            #sys.exit()
+        #print("-------")
         return moves
 
 
@@ -234,6 +235,7 @@ class Parser:
 
   
 filename = Path("en-ud-train-projective.conllu")
+correct_filename = "correct_moves_en-ud-dev.conllu"
 
 
 if __name__ == '__main__':
@@ -250,10 +252,18 @@ if __name__ == '__main__':
         p.step_by_step( args.step_by_step )
 
     elif args.compute_correct_moves:
+        with open(correct_filename) as f:
+            corr_moves = [json.loads(line.rstrip()) for line in f]
+            
+            
         with open(args.compute_correct_moves) as source:
             for w,tags,tree,relations in p.trees(source) :
-                print("TREE_NUM=",TREE_NUM)
-                print( p.compute_correct_moves(tree) )
+                #print("TREE_NUM=",TREE_NUM)
+                out = p.compute_correct_moves(tree)
+                print(out)
+                if corr_moves[TREE_NUM] != out:
+                    print("NOT EQUAL!")
+                    sys.exit()
                 TREE_NUM += 1
 
 
