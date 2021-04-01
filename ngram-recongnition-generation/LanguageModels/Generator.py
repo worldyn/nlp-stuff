@@ -65,6 +65,22 @@ class Generator(object) :
             with codecs.open(filename, 'r', 'utf-8') as f:
                 self.unique_words, self.total_words = map(int, f.readline().strip().split(' '))
                 # REUSE YOUR CODE FROM BigramTester.py here
+                i = 0
+                while i < self.unique_words:
+                    idx, word, unicount = f.readline().strip().split(' ')
+                    self.index[word] = int(idx)
+                    self.word[int(idx)] = word
+                    self.unigram_count[word] = int(unicount)
+                    i += 1
+                
+                while True:
+                    line = f.readline().strip()
+                    if line == '-1': # EOF
+                        break
+                    fromidx, toidx, lprob = line.split(' ')
+                    self.bigram_prob[int(fromidx)][int(toidx)] = \
+                            float(lprob)
+
                 return True
         except IOError:
             print("Couldn't find bigram probabilities file {}".format(filename))
@@ -76,8 +92,33 @@ class Generator(object) :
         of the language model.
         """ 
         # YOUR CODE HERE
-        pass
+        curr_word = w
+        print(curr_word)
 
+        for i in range(n):
+            if curr_word in self.index:
+                curr_idx = self.index[curr_word]
+                    
+                options = list(self.bigram_prob[curr_idx].items())
+                best_w = self.word[options[0][0]]
+                best_logprob = -math.inf
+                all_equal = True
+
+                if len(options) > 1:
+                    for toidx, logprob in options:
+                        if logprob > best_logprob:
+                            if best_logprob != math.inf:
+                                all_equal = False
+                            best_w = self.word[toidx]
+                            best_logprob = logprob
+
+                    if all_equal: 
+                        print("all eq")
+                        best_w = self.word[random.choice(options)[0]]
+            else:
+                best_w = random.choice(self.word)
+            print(best_w)
+            curr_word = best_w
 
 def main():
     """
