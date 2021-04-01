@@ -54,6 +54,7 @@ class BigramTrainer(object):
             self.bigram_count[self.last_token][token] += 1
 
         self.last_token = token
+        self.total_words += 1
         '''
         # The mapping from words to identifiers.
         self.index = {}
@@ -77,19 +78,21 @@ class BigramTrainer(object):
 
         # YOUR CODE HERE
         self.unique_words = len(self.word) 
+
+        rows_to_print.append("{} {}".format(
+            self.unique_words, self.total_words))
         
         for i in range(self.unique_words):
             word = self.word[i]
             count = self.unigram_count[word]
             s = '{} {} {}'.format(i, word, count)
             rows_to_print.append(s)
-            self.total_words += count
 
         for wfrom, dict2 in self.bigram_count.items():
             for wto, bicount in dict2.items():
                 fromidx = self.index[wfrom]
                 toidx = self.index[wto]
-                biprob = bicount / self.unigram_count[wfrom]
+                biprob = math.log(bicount / self.unigram_count[wfrom])
                 s = '{} {} {}'.format(fromidx, toidx, biprob)
                 rows_to_print.append(s)
 
