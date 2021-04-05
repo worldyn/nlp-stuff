@@ -261,6 +261,7 @@ if __name__ == '__main__':
                 #print("TREE_NUM=",TREE_NUM)
                 out = p.compute_correct_moves(tree)
                 print(out)
+                # CHECK IF NOT EQUAL!!
                 if corr_moves[TREE_NUM] != out:
                     print("NOT EQUAL!")
                     sys.exit()
