@@ -68,6 +68,22 @@ class BigramTester(object):
             with codecs.open(filename, 'r', 'utf-8') as f:
                 self.unique_words, self.total_words = map(int, f.readline().strip().split(' '))
                 # YOUR CODE HERE
+                i = 0
+                while i < self.unique_words:
+                    idx, word, unicount = f.readline().strip().split(' ')
+                    self.index[word] = int(idx)
+                    self.word[int(idx)] = word
+                    self.unigram_count[word] = int(unicount)
+                    i += 1
+
+                while True:
+                    line = f.readline().strip()
+                    if line == '-1': # EOF
+                        break
+                    fromidx, toidx, lprob = line.split(' ')
+                    self.bigram_prob[int(fromidx)][int(toidx)] = \
+                            float(lprob)
+
                 return True
         except IOError:
             print("Couldn't find bigram probabilities file {}".format(filename))
@@ -76,7 +92,29 @@ class BigramTester(object):
 
     def compute_entropy_cumulatively(self, word):
         # YOUR CODE HERE
-        pass
+        if word in self.index.keys():
+            widx = self.index[word]
+        else:
+            # does not exist in train corpus
+            widx = None
+            uniprob = 0
+
+        if self.last_index != -1:
+            if widx != None:
+                uniprob = self.unigram_count[word] / self.unique_words
+
+            if self.last_index in self.bigram_prob.keys() \
+                    and widx in self.bigram_prob[self.last_index].keys():
+                biprob = math.exp(self.bigram_prob[self.last_index][widx])
+            else:
+                biprob = 0
+            prob = self.lambda3 + self.lambda2*uniprob + self.lambda1*biprob
+            N = float(len(self.tokens))
+            self.logProb -= 1. / N * math.log(prob) 
+            self.test_words_processed += 1
+
+        self.last_index = widx
+        
 
     def process_test_file(self, test_filename):
         """
@@ -131,6 +169,8 @@ def main():
             print('Your results:')
             print('Estimated entropy: {0:.2f}'.format(bigram_tester.logProb))
             print("The server's results:\n Entropy: {0:.2f}".format(response_data['result']))
+            # TEST STUFF
+            print("NUM TOKENS: ", len(bigram_tester.tokens))
 
     else:
         print('Read {0:d} words. Estimated entropy: {1:.2f}'.format(bigram_tester.test_words_processed, bigram_tester.logProb))
