@@ -2,6 +2,9 @@
 *.swp
 dependency-parsing/*.jpg
 data
+*.txt
+*.csv
+*.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
