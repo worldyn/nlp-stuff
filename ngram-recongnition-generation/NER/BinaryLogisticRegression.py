@@ -15,14 +15,7 @@ class BinaryLogisticRegression(object):
     or stochastic gradient descent
     """
 
-    #  ------------- Hyperparameters ------------------ #
-
-    LEARNING_RATE = 0.01  # The learning rate.
-    CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
-    MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
-    MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
-
-    # ----------------------------------------------------------------------
+        # ----------------------------------------------------------------------
 
 
     def __init__(self, x=None, y=None, theta=None):
@@ -33,6 +26,13 @@ class BinaryLogisticRegression(object):
         @param y The labels as a DATAPOINT array.
         @param theta A ready-made model. (instead of x and y)
         """
+        #  ------------- Hyperparameters ------------------ #
+
+        self.LEARNING_RATE = 0.01  # The learning rate.
+        self.CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
+        self.MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
+        self.MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
+
         if not any([x, y, theta]) or all([x, y, theta]):
             raise Exception('You have to either give x and y or theta')
 
@@ -68,7 +68,8 @@ class BinaryLogisticRegression(object):
         """
         The logistic function.
         """
-        return 1.0 / ( 1 + math.exp(-z) )
+        #return 1.0 / ( 1 + math.exp(-z) )
+        return 1.0 / ( 1 + np.exp(-z) )
 
 
     def conditional_prob(self, label, datapoint):
@@ -77,19 +78,32 @@ class BinaryLogisticRegression(object):
         """
 
         # REPLACE THE COMMAND BELOW WITH YOUR CODE
+        x = self.x[datapoint]
+        out = self.sigmoid(self.theta.T @ x)
+        if label == 1:
+            return out
+        else:
+            return 1 - out
 
-        return 0
+    def piece(y, out):
+        return np.piecewise(y, [y == 1, y == 0], [out, 1-out])
 
-
-    def compute_gradient_for_all(self):
+    '''
+    def cond(self, Y,X):
         """
-        Computes the gradient based on the entire dataset
-        (used for batch gradient descent).
+        Computes the conditional probability P(label|datapoint)
         """
 
-        # YOUR CODE HERE
-
-
+        # REPLACE THE COMMAND BELOW WITH YOUR CODE
+        print(X.shape)
+        print(Y.shape)
+        N,d = X.shape
+        theta = self.theta.reshape((1,d))
+        print(theta.shape)
+        out = self.sigmoid(theta @ X)
+        return self.piece(Y,out) 
+    '''
+    
     def compute_gradient_minibatch(self, minibatch):
         """
         Computes the gradient based on a minibatch
@@ -125,6 +139,25 @@ class BinaryLogisticRegression(object):
 
         # YOUR CODE HERE
 
+    def compute_gradient_for_all(self):
+        """
+        Computes the gradient based on the entire dataset
+        (used for batch gradient descent).
+        """
+
+        # YOUR CODE HERE
+        N = len(self.x)
+        X = self.x
+        Y = self.y
+        for k in range(self.FEATURES):
+            #O = self.cond(Y,X)
+            #self.gradient[k] = 1./N*np.sum(X[k]*(O-Y))
+
+            for i in range(N):
+                x = self.x[i]
+                y = self.y[i]
+                out = self.conditional_prob(y, i)
+                self.gradient[k] += 1./N*x[k]*(out - y)
 
     def fit(self):
         """
@@ -133,6 +166,24 @@ class BinaryLogisticRegression(object):
         self.init_plot(self.FEATURES)
 
         # YOUR CODE HERE
+        #self.gradient = np.zeros(self.FEATURES)
+        #self.theta
+        #LEARNING_RATE = 0.01  # The learning rate.
+        #CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
+        X = self.x 
+        Y = self.y
+        N,dim = X.shape
+        it = 0
+        #while it == 0 or np.all(np.abs(self.gradient) > self.CONVERGENCE_MARGIN):
+        while it < 6:
+            print("it: ", it)
+            self.compute_gradient_for_all()
+            #print(self.gradient)
+            for k in range(self.FEATURES):
+                self.theta[k] -= self.LEARNING_RATE * self.gradient[k] 
+            it += 1
+            if it % 2 == 0:
+                self.update_plot(np.sum(np.square(self.gradient)))
 
 
     def classify_datapoints(self, test_data, test_labels):

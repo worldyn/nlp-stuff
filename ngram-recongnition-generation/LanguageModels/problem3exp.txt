@@ -1,0 +1,4 @@
+austen austen: Read 13161 words. Estimated entropy: 5.05
+austen guardian: Read 871837 words. Estimated entropy: 8.66
+guardian austen: Read 13161 words. Estimated entropy: 5.74
+guardian guardian Read 871837 words. Estimated entropy: 5.98

@@ -103,17 +103,20 @@ class BigramTester(object):
             if widx != None:
                 uniprob = self.unigram_count[word] / self.unique_words
 
-            if self.last_index in self.bigram_prob.keys() \
-                    and widx in self.bigram_prob[self.last_index].keys():
-                biprob = math.exp(self.bigram_prob[self.last_index][widx])
-            else:
-                biprob = 0
+            from_word = self.tokens[self.last_index] 
+            biprob = 0
+            if from_word in self.index:
+                fromidx = self.index[from_word]
+                if fromidx in self.bigram_prob.keys() and widx \
+                        in self.bigram_prob[fromidx].keys():
+                    biprob = math.exp(self.bigram_prob[fromidx][widx])
             prob = self.lambda3 + self.lambda2*uniprob + self.lambda1*biprob
             N = float(len(self.tokens))
             self.logProb -= 1. / N * math.log(prob) 
-            self.test_words_processed += 1
 
-        self.last_index = widx
+        #self.last_index = widx
+        self.last_index += 1 
+        self.test_words_processed += 1
         
 
     def process_test_file(self, test_filename):
