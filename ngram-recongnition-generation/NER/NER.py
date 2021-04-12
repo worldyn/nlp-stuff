@@ -53,7 +53,12 @@ class NER(object):
 
 
     def first_token_in_sentence(self):
-           return self.last_token in [None, '.', '!', '?']
+        return self.last_token in [None, '.', '!', '?']
+
+    def honorific(self):
+        options = ["Mr","Mr.","Miss","Ms","Ms.","Mrs.", "Missus"]
+        #return options in self.current_token  
+        return any(x in self.current_token for x in options)  
 
     class FeatureFunction(object):
         def __init__(self, func):
@@ -130,6 +135,7 @@ class NER(object):
         self.features = [
             NER.FeatureFunction(self.capitalized_token),
             NER.FeatureFunction(self.first_token_in_sentence),
+            NER.FeatureFunction(self.honorific)
         ]
 
         if training_file:

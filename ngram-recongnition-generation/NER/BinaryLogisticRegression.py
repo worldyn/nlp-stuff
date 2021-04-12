@@ -218,7 +218,7 @@ class BinaryLogisticRegression(object):
         it = 0
         #print("init theta: ", self.theta)
         #while it == 0 or np.all(np.abs(self.gradient) >= self.CONVERGENCE_MARGIN):
-        while it < 100:
+        while it < 60:
             #self.compute_gradient_for_all()
             points = np.arange(0,N)
             self.compute_gradient_minibatch(points)
@@ -263,6 +263,9 @@ class BinaryLogisticRegression(object):
             else:
                 print('                 {:2d} '.format(i), end='')
             print(' '.join('{:>8.3f}'.format(confusion[i][j]) for j in range(2)))
+        acc = (confusion[0][0] + confusion[1][1]) \
+            / sum(sum(x) for x in confusion)
+        print("ACCURACY: ", acc)
 
 
     def print_result(self):
