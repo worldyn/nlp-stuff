@@ -28,7 +28,8 @@ class BinaryLogisticRegression(object):
         """
         #  ------------- Hyperparameters ------------------ #
 
-        self.LEARNING_RATE = 0.01  # The learning rate.
+        self.LEARNING_RATE = 1  # The learning rate.
+        #self.LEARNING_RATE = 0.01  # The learning rate.
         self.CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
         self.MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
         self.MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
@@ -217,8 +218,10 @@ class BinaryLogisticRegression(object):
         it = 0
         #print("init theta: ", self.theta)
         #while it == 0 or np.all(np.abs(self.gradient) >= self.CONVERGENCE_MARGIN):
-        while it < 30:
-            self.compute_gradient_for_all()
+        while it < 100:
+            #self.compute_gradient_for_all()
+            points = np.arange(0,N)
+            self.compute_gradient_minibatch(points)
 
             for k in range(self.FEATURES):
                 self.theta[k] -= self.LEARNING_RATE * self.gradient[k] 
