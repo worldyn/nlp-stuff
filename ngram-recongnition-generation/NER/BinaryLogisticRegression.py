@@ -28,7 +28,7 @@ class BinaryLogisticRegression(object):
         """
         #  ------------- Hyperparameters ------------------ #
 
-        self.LEARNING_RATE = 1  # The learning rate.
+        self.LEARNING_RATE = 0.01  # The learning rate.
         self.CONVERGENCE_MARGIN = 0.001  # The convergence criterion.
         self.MAX_ITERATIONS = 100 # Maximal number of passes through the datapoints in stochastic gradient descent.
         self.MINIBATCH_SIZE = 1000 # Minibatch size (only for minibatch gradient descent)
@@ -79,31 +79,25 @@ class BinaryLogisticRegression(object):
 
         # REPLACE THE COMMAND BELOW WITH YOUR CODE
         x = self.x[datapoint]
-        out = self.sigmoid(np.dot(x, self.theta))
+        #out = self.sigmoid(np.dot(x, self.theta))
+        #print("shape tjeta",self.theta.T.shape)
+        #print("shape x",x.shape)
         out = self.sigmoid(self.theta.T @ x)
         if label == 1:
             return out
         return 1 - out
 
-    #def piece(y, out):
-    #    return np.piecewise(y, [y == 1, y == 0], [out, 1-out])
-
-    '''
-    def cond(self, Y,X):
+    # assumes labels = 1
+    # X : DATAPOINTS x FEATURES
+    # returns N x 1 matrix
+    def conditional_prob_batch(self, X):
         """
-        Computes the conditional probability P(label|datapoint)
+        Computes the conditional probability P(label|datapoint) with batch
         """
+        
+        return self.sigmoid(X @ self.theta)
 
-        # REPLACE THE COMMAND BELOW WITH YOUR CODE
-        print(X.shape)
-        print(Y.shape)
-        N,d = X.shape
-        theta = self.theta.reshape((1,d))
-        print(theta.shape)
-        out = self.sigmoid(theta @ X)
-        return self.piece(Y,out) 
-    '''
-    
+    # minibatch = indexes
     def compute_gradient_minibatch(self, minibatch):
         """
         Computes the gradient based on a minibatch
@@ -111,7 +105,41 @@ class BinaryLogisticRegression(object):
         """
         
         # YOUR CODE HERE
+        N = len(minibatch)
+        X = self.x[minibatch]
+        Y = self.y[minibatch]
+        self.gradient = np.zeros(self.FEATURES)
+        for k in range(self.FEATURES):
+            O = self.conditional_prob_batch(X)
+            self.gradient[k] = 1./N*np.sum(X[:,k]*(O-Y))
 
+    def minibatch_fit(self):
+        """
+        Performs Mini-batch Gradient Descent.
+        """
+        self.init_plot(self.FEATURES)
+
+        # YOUR CODE HERE
+        epoch = 0
+
+        N = len(self.x)
+        num_batches = int(N / self.MINIBATCH_SIZE)
+        while epoch < 30:
+            for i in range(num_batches):
+                minibatch = np.arange(
+                    i*self.MINIBATCH_SIZE, 
+                    (i+1)*self.MINIBATCH_SIZE
+                )
+
+                self.compute_gradient_minibatch(minibatch)
+
+                for k in range(self.FEATURES):
+                    self.theta[k] -= self.LEARNING_RATE * self.gradient[k] 
+
+            if epoch % 1 == 0:
+                print("epoch ", epoch, " : ", self.gradient)
+                self.update_plot(np.sum(np.square(self.gradient)))
+            epoch += 1
 
     # datapoint = idx for data point x
     def compute_gradient(self, datapoint):
@@ -126,7 +154,7 @@ class BinaryLogisticRegression(object):
         y = self.y[datapoint]
         self.gradient = np.zeros(self.FEATURES)
         for k in range(self.FEATURES):
-            out = self.conditional_prob(y, datapoint)
+            out = self.conditional_prob(1, datapoint)
             self.gradient[k] = x[k]*(out - y)
 
     def stochastic_fit(self):
@@ -142,7 +170,8 @@ class BinaryLogisticRegression(object):
         it = 0
         #print("init theta: ", self.theta)
 
-        while it < 10*N:
+        print("num points :", N)
+        while it < 50000:
             #print("it: ", it)
             datapoint = np.random.randint(N)
             self.compute_gradient(datapoint)
@@ -150,20 +179,11 @@ class BinaryLogisticRegression(object):
             for k in range(self.FEATURES):
                 self.theta[k] -= self.LEARNING_RATE * self.gradient[k] 
             #print("theta: ", self.theta)
-            it += 1
-            if it % 10000 == 0:
-                print(self.gradient)
+            if it % 2000 == 0:
+                #print(self.gradient)
                 self.update_plot(np.sum(np.square(self.gradient)))
+            it += 1
 
-
-
-    def minibatch_fit(self):
-        """
-        Performs Mini-batch Gradient Descent.
-        """
-        self.init_plot(self.FEATURES)
-
-        # YOUR CODE HERE
 
     def compute_gradient_for_all(self):
         """
