@@ -3,6 +3,7 @@ import argparse
 import codecs
 from collections import defaultdict
 import random
+import numpy as np
 
 """
 This file is part of the computer assignments for the course DD1418/DD2418 Language engineering at KTH.
@@ -93,32 +94,28 @@ class Generator(object) :
         """ 
         # YOUR CODE HERE
         curr_word = w
-        print(curr_word)
 
         for i in range(n):
             if curr_word in self.index:
                 curr_idx = self.index[curr_word]
                     
-                options = list(self.bigram_prob[curr_idx].items())
-                best_w = self.word[options[0][0]]
-                best_logprob = -math.inf
-                all_equal = True
-
-                if len(options) > 1:
-                    for toidx, logprob in options:
-                        if logprob > best_logprob:
-                            if best_logprob != math.inf:
-                                all_equal = False
-                            best_w = self.word[toidx]
-                            best_logprob = logprob
-
-                    if all_equal: 
-                        print("all eq")
-                        best_w = self.word[random.choice(options)[0]]
+                word_ops = np.array(list(self.bigram_prob[curr_idx].keys()))
+                prob_ops = np.array(list(self.bigram_prob[curr_idx].values()))
+                prob_ops = np.exp(prob_ops)
+                
+                if len(word_ops) > 0:
+                    generated_idx = np.random.choice(
+                        a = word_ops,
+                        size = 1,
+                        p = prob_ops
+                    )[0]
+                    next_w = self.word[generated_idx] 
+                else:
+                    next_w = random.choice(self.word)
             else:
-                best_w = random.choice(self.word)
-            print(best_w)
-            curr_word = best_w
+                next_w = random.choice(self.word)
+            print(next_w)
+            curr_word = next_w
 
 def main():
     """
