@@ -3,8 +3,13 @@ import argparse
 import time
 import string
 import numpy as np
+import re
+import string
 from halo import Halo
 from sklearn.neighbors import NearestNeighbors
+from string import digits
+import random
+import sys
 
 
 """
@@ -75,7 +80,15 @@ class RandomIndexing(object):
     ##
     def clean_line(self, line):
         # YOUR CODE HERE
-        return []
+        cleaned = []
+        tok_list = line.split() # split by spaces
+        # only use alpha chars
+        for tok in tok_list:
+            #tok.translate(None, string.punctuation)
+            clean_tok = ''.join([x for x in list(tok) if x.isalpha()])
+            if clean_tok != "":
+                cleaned.append(clean_tok)
+        return cleaned
 
 
     ##
@@ -111,6 +124,10 @@ class RandomIndexing(object):
     ##
     def build_vocabulary(self):
         # YOUR CODE HERE
+        for part in self.text_gen():
+            for w in part:
+                #print(w)
+                self.__vocab.add(w)
         self.write_vocabulary()
 
 
@@ -168,8 +185,29 @@ class RandomIndexing(object):
     ##
     def create_word_vectors(self):
         # YOUR CODE HERE
-        pass
-
+        self.__cv = {}
+        self.__rv = {}
+        for tok in self.__vocab:
+            # ctx
+            self.__cv[tok] = np.zeros(self.__dim)
+            # rand
+            rw = np.zeros(self.__dim)
+            idx = random.sample(range(self.__dim), self.__non_zero)
+            rw[idx] = np.random.choice(np.array(self.__non_zero_values), self.__non_zero)
+            self.__rv[tok] = rw 
+            #np.set_printoptions(threshold=sys.maxsize)
+        
+        for linelist in self.text_gen():
+            for i,fw in enumerate(linelist):
+                cw = np.zeros(self.__dim)
+                for j in range(i-self.__lws, i):
+                    if j >= 0:
+                        cw += self.__rv[linelist[j]]
+                for j in range(i+1, i+self.__lws+1):
+                    if j < len(linelist):
+                        cw += self.__rv[linelist[j]]
+                self.__cv[fw] += cw
+        
 
     ##
     ## @brief      Function returning k nearest neighbors with distances for each word in `words`
@@ -199,6 +237,13 @@ class RandomIndexing(object):
     ##
     def find_nearest(self, words, k=5, metric='cosine'):
         # YOUR CODE HERE
+        knn = NearestNeighbors(n_neighbors=k,metric=metric)
+
+        # TODO: fit nn
+
+        for word in words:
+            wordvect = self.get_word_vector(word)
+            dists, idxs = knn.
         return [None]
 
 
@@ -211,6 +256,8 @@ class RandomIndexing(object):
     ##
     def get_word_vector(self, word):
         # YOUR CODE HERE
+        if word in self.__cv.keys():
+            return self.__cv[word]
         return None
 
 
