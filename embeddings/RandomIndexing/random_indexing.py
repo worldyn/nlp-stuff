@@ -237,14 +237,47 @@ class RandomIndexing(object):
     ##
     def find_nearest(self, words, k=5, metric='cosine'):
         # YOUR CODE HERE
+        if not words or len(words) < 1:
+            return [None]
+
+        X_test = []
+        for tok in words:
+            v = self.get_word_vector(tok)
+            if tok is not None and v is not None:
+                X_test.append(v)
+        #print("num words: ", len(X_test))
+
+        
+        #X_train = np.zeros((len(self.__vocab), self.__dim
+        X_train = []
+        idx_to_word = []
+        for tok in self.__vocab:
+            X_train.append(self.get_word_vector(tok))
+            idx_to_word.append(tok)
+
+        #print("num vocab words: ",len(X_train))
+        #print("train",X_train[3])
+
+        # fit kNN
         knn = NearestNeighbors(n_neighbors=k,metric=metric)
-
-        # TODO: fit nn
-
-        for word in words:
-            wordvect = self.get_word_vector(word)
-            dists, idxs = knn.
-        return [None]
+        knn.fit(X_train)
+        
+        # infer neighbors
+        tuplist = []
+        dists, idxs = knn.kneighbors(X=X_test)
+        #print("d",dists)
+        #print("idx",idxs)
+        for i in range(len(idxs)):
+            l = []
+            for j in range(k):
+                # [[('Harry', 0.0), ('Hagrid', 0.07), ...
+                widx = idxs[i][j]
+                dist = dists[i][j]
+                l.append((idx_to_word[widx],dist))
+            tuplist.append(l)
+        #print(tuplist)
+        #print("\n-----")
+        return tuplist
 
 
     ##
@@ -362,5 +395,6 @@ if __name__ == '__main__':
         dir_name = "data"
         filenames = [os.path.join(dir_name, fn) for fn in os.listdir(dir_name)]
 
-        ri = RandomIndexing(filenames)
+        #ri = RandomIndexing(filenames)
+        ri = RandomIndexing(filenames,left_window_size=10, right_window_size=1)
         ri.train_and_persist()
