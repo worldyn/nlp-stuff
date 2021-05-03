@@ -143,14 +143,14 @@ class Word2Vec(object):
         numtoks = 0
         for line in self.text_gen():
             for w in line:
-                if w not in self.__vocab:
+                if w not in self.__vocab.keys():
                     self.__vocab[w] = 1
                     self.__V += 1
                 else:
                     self.__vocab[w] += 1
                 numtoks += 1
 
-        words = list(self.__vocab)
+        words = list(self.__vocab.keys())
         self.__w2i = {}
         self.__i2w = {}
         for i in range(self.__V):
@@ -205,8 +205,17 @@ class Word2Vec(object):
         # xb: current foc
         # pos: current ctx
 
+        pop = np.array(list(self.__unigrams_corr.keys()))
+        probs = np.array(list(self.__unigrams_corr.values()))
+        negs = {}
+        for i in range(number):
+            samp = pos
+            while samp in self.__pos_words.values():
+                samp = np.random.choice(a=pop, size=1, p=probs)[0]
+            sampidx = self.__w2i[samp]
+            negs[samp] = sampidx
 
-        return []
+        return negs
 
 
     def train(self):
@@ -223,8 +232,9 @@ class Word2Vec(object):
         self.__U = self.__U.T
 
         for ep in range(self.__epochs):
-            self.pos_words = {} # keys are words
+            self.__pos_words = {} # keys are words
             for i in tqdm(range(N)):
+            #for i in tqdm(range(100)):
                 #
                 # YOUR CODE HERE 
                 #
@@ -234,9 +244,9 @@ class Word2Vec(object):
                 # pos samples
                 for cidx in contexts:
                     ctxw = self.__i2w[cidx]
-                    self.pos_words[ctxw] = cidx
+                    self.__pos_words[ctxw] = cidx
                 
-                gradw = np.zeros(self.__H) # summarise for focus gradiet
+                wdiff = np.zeros(self.__H) # summarise for focus gradiet
                 for cidx in contexts:
                     # gradients for logistic loss functions
                     w = self.__W[foc] # focus vect
@@ -244,14 +254,23 @@ class Word2Vec(object):
                     grad_ctx = w * (self.sigmoid(np.dot(u, w)) - 1)
                     grad_foc = u * (self.sigmoid(np.dot(u, w)) - 1)
 
-                    gradw += grad_foc
-                    self.__U[:,cidx] -= self.__lr* grad_ctx
+                    wdiff += grad_foc
                     
-                    # negatives
-                    self.neg_words = self.negative_sampling(self.__nsample, i, cidx)
+                    # negatives dict with __nsample samples
+                    self.__neg_words = self.negative_sampling(self.__nsample, i, cidx)
+                    unegsum = 0
+                    for negidx in self.__neg_words.values():
+                        u_neg = self.__U[:,negidx]
+                        grad_ctx_neg = w * (1 - self.sigmoid(np.dot(-1 * u_neg, w)))
+                        grad_foc_neg = u_neg * self.sigmoid(np.dot(u_neg,w))
+                        unegsum += self.__lr * grad_ctx_neg
+                        wdiff += grad_foc_neg
+
+                    self.__U[:,cidx] -= self.__lr* grad_ctx - unegsum
+                    self.__W[foc] -= self.__lr * wdiff
 
 
-    def find_nearest(self, words, metric):
+    def find_nearest(self, words, metric, k=5):
         """
         Function returning k nearest neighbors with distances for each word in `words`
         
@@ -280,7 +299,54 @@ class Word2Vec(object):
         #
         # REPLACE WITH YOUR CODE
         #
-        return []
+        if not words or len(words) < 1:
+            return [None]
+
+        X_test = []
+        for tok in words:
+            #v = self.get_word_vector(tok)
+            if tok in self.__w2i.keys():
+                v = self.__W[self.__w2i[tok]]
+                X_test.append(v)
+        #print("num words: ", len(X_test))
+        
+        if len(X_test) < 1:
+            return [None]
+        X_test = np.array(X_test)
+
+        #X_train = np.zeros((len(self.__vocab), self.__dim
+        #X_train = []
+        X_train = self.__W 
+        #idx_to_word = []
+        #for tok in self.__vocab:
+        #    v = self.__W[self.__w2i[tok]]
+        #    X_train.append(v)
+        #    idx_to_word.append(tok)
+
+        #print("num vocab words: ",len(X_train))
+        #print("train",X_train[3])
+
+        # fit kNN
+        knn = NearestNeighbors(n_neighbors=k,metric=metric)
+        knn.fit(X_train)
+
+        # infer neighbors
+        tuplist = []
+        dists, idxs = knn.kneighbors(X=X_test)
+        #print("d",dists)
+        #print("idx",idxs)
+        for i in range(len(idxs)):
+            l = []
+            for j in range(k):
+                # [[('Harry', 0.0), ('Hagrid', 0.07), ...
+                widx = idxs[i][j]
+                word = self.__i2w[widx]
+                dist = dists[i][j]
+                l.append((word,dist))
+            tuplist.append(l)
+        #print(tuplist)
+        #print("\n-----")
+        return tuplist
 
 
     def write_to_file(self):
@@ -292,7 +358,7 @@ class Word2Vec(object):
                 W = self.__W
                 f.write("{} {}\n".format(self.__V, self.__H))
                 for i, w in enumerate(self.__i2w):
-                    f.write(w + " " + " ".join(map(lambda x: "{0:.6f}".format(x), W[i,:])) + "\n")
+                    f.write(str(w) + " " + " ".join(map(lambda x: "{0:.6f}".format(x), W[i,:])) + "\n")
         except:
             print("Error: failing to write model to the file")
 
