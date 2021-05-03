@@ -67,7 +67,15 @@ class Word2Vec(object):
         #
         # REPLACE WITH YOUR CODE HERE
         #
-        return []
+        cleaned = []
+        tok_list = line.split() # split by spaces
+        # only use alpha chars
+        for tok in tok_list:
+            #tok.translate(None, string.punctuation)
+            clean_tok = ''.join([x for x in list(tok) if x.isalpha()])
+            if clean_tok != "":
+                cleaned.append(clean_tok)
+        return cleaned
 
 
     def text_gen(self):
@@ -101,7 +109,18 @@ class Word2Vec(object):
         #
         # REPLACE WITH YOUR CODE
         # 
-        return []
+        ctx = []
+        for j in range(i - self.__lws, i):
+            if j >= 0:
+                w = sent[j]
+                ctx.append(self.__w2i[w])
+
+        for j in range(i+1, i + self.__rws+1):
+            if j < len(sent):
+                w = sent[j]
+                ctx.append(self.__w2i[w])
+
+        return ctx
 
 
     def skipgram_data(self):
@@ -117,7 +136,48 @@ class Word2Vec(object):
         #
         # REPLACE WITH YOUR CODE
         # 
-        return [], []
+
+        # vocab
+        self.__vocab = {}
+        self.__V = 0
+        numtoks = 0
+        for line in self.text_gen():
+            for w in line:
+                if w not in self.__vocab:
+                    self.__vocab[w] = 1
+                    self.__V += 1
+                else:
+                    self.__vocab[w] += 1
+                numtoks += 1
+
+        words = list(self.__vocab)
+        self.__w2i = {}
+        self.__i2w = {}
+        for i in range(self.__V):
+            self.__w2i[words[i]] = i
+            self.__i2w[i] = words[i]
+
+        # unigram distributions
+        dsum = 0
+        self.__unigrams = {}
+        self.__unigrams_corr = {}
+        for w in self.__vocab.keys():
+            self.__unigrams[w] = float(self.__vocab[w]) / numtoks
+            dsum += np.power(self.__unigrams[w], 0.75)
+        for w in self.__vocab.keys():
+            self.__unigrams_corr[w] = np.power(self.__unigrams[w],0.75) / dsum 
+
+        # list of focus and ctx words using get_context()
+        f =  []
+        ctx = []
+        for line in self.text_gen():
+            # line is list of words
+            for widx in range(len(line)):
+                w = line[widx]
+                f.append(self.__w2i[w])
+                ctx.append(self.get_context(line,  widx))
+
+        return f,ctx
 
 
     def sigmoid(self, x):
@@ -142,6 +202,10 @@ class Word2Vec(object):
         #
         # REPLACE WITH YOUR CODE
         #
+        # xb: current foc
+        # pos: current ctx
+
+
         return []
 
 
@@ -154,15 +218,37 @@ class Word2Vec(object):
         print("Dataset contains {} datapoints".format(N))
 
         # REPLACE WITH YOUR RANDOM INITIALIZATION
-        self.__W = np.zeros((100, 50))
-        self.__U = np.zeros((100, 50))
+        self.__W = np.random.uniform(-1, 1, (self.__V, self.__H))
+        self.__U = np.random.uniform(-1, 1, (self.__V, self.__H))
+        self.__U = self.__U.T
 
         for ep in range(self.__epochs):
+            self.pos_words = {} # keys are words
             for i in tqdm(range(N)):
                 #
                 # YOUR CODE HERE 
                 #
-                pass
+                foc = x[i]
+                contexts = np.array(t[i])
+                
+                # pos samples
+                for cidx in contexts:
+                    ctxw = self.__i2w[cidx]
+                    self.pos_words[ctxw] = cidx
+                
+                gradw = np.zeros(self.__H) # summarise for focus gradiet
+                for cidx in contexts:
+                    # gradients for logistic loss functions
+                    w = self.__W[foc] # focus vect
+                    u = self.__U[:, cidx] # ctx vect
+                    grad_ctx = w * (self.sigmoid(np.dot(u, w)) - 1)
+                    grad_foc = u * (self.sigmoid(np.dot(u, w)) - 1)
+
+                    gradw += grad_foc
+                    self.__U[:,cidx] -= self.__lr* grad_ctx
+                    
+                    # negatives
+                    self.neg_words = self.negative_sampling(self.__nsample, i, cidx)
 
 
     def find_nearest(self, words, metric):
