@@ -1,4 +1,5 @@
 # images
+*.vectors
 *.swp
 dependency-parsing/*.jpg
 data
