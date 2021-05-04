@@ -418,7 +418,7 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--text', default='harry_potter_1.txt',
                         help='Comma-separated source text files to be trained on')
     parser.add_argument('-s', '--save', default='w2v.txt', help='Filename where word vectors are saved')
-    parser.add_argument('-d', '--dimension', default=50, help='Dimensionality of word vectors')
+    parser.add_argument('-d', '--dimension', default=300, help='Dimensionality of word vectors')
     parser.add_argument('-ws', '--window-size', default=2, help='Context window size')
     parser.add_argument('-neg', '--negative_sample', default=10, help='Number of negative samples')
     parser.add_argument('-lr', '--learning-rate', default=0.025, help='Initial learning rate')
