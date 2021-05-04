@@ -179,7 +179,9 @@ class NER(object):
         self.last_token = None #  The token on the preceding line.
 
         # self.W, self.i2w, self.w2i = NER.read_word_vectors(word_vectors_file)
+        print("reading word vectors...")
         self.mo, self.fo = NER.mmap_read_word_vectors(word_vectors_file)
+        print("word vectors read in")
         
         # get the dimensionality of the vectors
         p = self.mo.find("\nthe".encode('utf8')) + 1
@@ -208,15 +210,24 @@ class NER(object):
 
         if training_file:
             # Train a model
+            print("building featues...")
             training_set = self.read_and_process_data(training_file)
+            print(training_set)
             if training_set:
                 start_time = time.time()
+                print("starting training...")
                 b = BinaryLogisticRegression(training_set.x, training_set.y)
                 if stochastic_gradient_descent:
-                    b.stochastic_fit_with_early_stopping()
+                    #b.stochastic_fit_with_early_stopping()
+                    print("running stoc minibatch fit...")
+                    b.stochastic_fit()
                 elif minibatch_gradient_descent:
-                    b.minibatch_fit_with_early_stopping()
+                    #b.minibatch_fit_with_early_stopping()
+                    print("running minibatch fit...")
+                    b.minibatch_fit()
                 else:
+                    #b.fit()
+                    print("running fit...")
                     b.fit()
                 print("Model training took {}s".format(round(time.time() - start_time, 2)))
 
