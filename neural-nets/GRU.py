@@ -20,9 +20,12 @@ class GRUCellV2(nn.Module):
         """
         super(GRUCellV2, self).__init__()
         self.activation = activation
+        self.hidden_size = hidden_size
+        self.input_size = input_size
 
         # initialize weights by sampling from a uniform distribution between -K and K
         K = 1 / np.sqrt(hidden_size)
+        
         # weights
         self.w_ih = nn.Parameter(torch.rand(3 * hidden_size, input_size) * 2 * K - K)
         self.w_hh = nn.Parameter(torch.rand(3 * hidden_size, hidden_size) * 2 * K - K)
@@ -46,20 +49,25 @@ class GRUCellV2(nn.Module):
         # YOUR CODE HERE
         #
         # split chunks to weight matrices matmuled with x
-        # TODO: fix so it is batch!!!!
-        print("w_ih shape: ",self.w_ih.shape)
-        print("x shape: ",x.shape)
+        B = x.shape[0]
         W_ir_x, W_iz_x, W_in_x = torch.chunk(torch.matmul(self.w_ih, x.T), 3)
-        print("W_ir_x: ",W_ir_x.shape)
         W_hr_h, W_hz_h, W_hn_h = torch.chunk(torch.matmul(self.w_hh, h.T), 3)
-        b_ir, b_iz, b_in = torch.chunk(self.b_ih, 3)
-        b_hr, b_hz, b_hn = torch.chunk(self.b_hh, 3) 
+        # extract biases and repeat for batch computations
+        b_ir, b_iz, b_in = list(map(
+            lambda b: b.reshape(1,self.hidden_size).T.repeat(1,B), 
+            torch.chunk(self.b_ih, 3)
+        ))
+        b_hr, b_hz, b_hn = list(map(
+            lambda b: b.reshape(1,self.hidden_size).T.repeat(1,B), 
+            torch.chunk(self.b_hh, 3) 
+        )) 
         
         # GRU operations 
         r = torch.sigmoid(W_ir_x + b_ir + W_hr_h + b_hr)
         z = torch.sigmoid(W_iz_x + b_iz + W_hz_h + b_hz)
         h_in = self.activation(W_in_x + b_in + r * (W_hn_h + b_hn))
-        return (1-z) * h_in + z * h # new hidden h_t
+        h_t = (1-z) * h_in + z * h.T # new hidden h_t
+        return h_t.T
 
 
 class GRU2(nn.Module):
@@ -108,7 +116,7 @@ class GRU2(nn.Module):
             h_fw = self.fw(x_fw, h_fw)
             outs_fw[t_fw] = h_fw
             if self.bidirectional:
-                t_bw = T - 1 - t
+                t_bw = T - 1 - t_fw
                 x_bw = x[:,t_bw,:] # x at time step t backward
                 h_bw = self.bw(x_bw, h_bw)
                 outs_bw[t_bw] = h_bw
