@@ -1,0 +1,12 @@
+Problem 1:
+
+Checking the unidirectional GRU implementation
+Same hidden states of the forward cell?		Yes
+Checking the bidirectional GRU implementation
+Same hidden states of the forward cell?		Yes
+Same hidden states of the backward cell?	Yes
+
+---------------
+Problem 2:
+
+
