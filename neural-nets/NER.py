@@ -175,7 +175,64 @@ class NERClassifier(nn.Module):
         #
         # YOUR CODE HERE
         #
-        return torch.zeros((len(x), len(x[0]), 2), requires_grad=True)
+        B = len(x)
+        MAXS = len(x[0])
+        unknown_idx = self.w2i[UNKNOWN_WORD]
+
+        # tokenize and get word embeddings
+        MAXC = 0
+        indexes = []
+        for sentence in x:
+            sen_l = []
+            for word in sentence:
+                sen_l.append(self.w2i.get(word, unknown_idx))
+                if len(word) > MAXC:
+                    MAXC = len(word)
+            indexes.append(sen_l)
+        indexes = torch.IntTensor(indexes)
+        word_embs = self.word_emb(indexes) 
+        #print("glove word embs 3D: ",word_embs.shape)
+
+        # get character embeddings
+        char_embs = torch.empty(B, MAXS, MAXC, self.char_emb_size)
+        for sidx in range(B):
+            for widx in range(MAXS):
+                word = x[sidx][widx]
+                char_idxs = torch.empty(MAXC, dtype=torch.int)
+                for cidx in range(MAXC):
+                    if cidx < len(word):
+                        char = word[cidx]
+                    else:
+                        char = '<UNK>'
+                    char_idx = self.c2i[char] 
+                    char_idxs[cidx] = char_idx
+
+                word_char_emb = self.char_emb(char_idxs)
+                char_embs[sidx,widx] = word_char_emb
+        #print("char embds 4D: ",char_embs.shape)
+        
+        # change format for character GRU from 4D to 3D
+        char_embs = torch.reshape(char_embs, (B * MAXS, MAXC, self.char_emb_size))
+        #print("char embds 3D: ",char_embs.shape)
+
+        # character GRU stuff
+        outs_char, h_fw_char, h_bw_char = self.char_birnn(char_embs)
+        #print("hidden output char GRU (forward): ", h_fw_char.shape)
+        hid_char_cat = torch.cat((h_fw_char,h_bw_char), dim=1)
+        #print("concated cGRU hid: ", hid_char_cat.shape)
+        hid_char_cat = torch.reshape(hid_char_cat, (B, MAXS, 2 * self.char_hidden_size))
+        #print("cGRU hid 3D ", hid_char_cat.shape)
+        #print("glove word embs 3D: ",word_embs.shape)
+
+        # concat word and character tensors 
+        concat = torch.cat((word_embs, hid_char_cat), dim=2)
+        #print("word+char concat 3D: ",concat.shape)
+
+        # word level GRU 
+        outs, h_fw, h_bw = self.word_birnn(concat)
+
+        return self.final_pred(outs)
+        #return torch.zeros((len(x), len(x[0]), 2), requires_grad=True)
 
 
 
@@ -198,8 +255,10 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--epochs', default=5, type=int, help='Number of epochs')
     args = parser.parse_args()
 
+    print("loading data...")
     training_data = NERDataset(args.train)
     training_loader = DataLoader(training_data, batch_size=128, collate_fn=PadSequence())
+    print("setting up model...")
 
     ner = NERClassifier(
         args.word_vectors,
@@ -208,9 +267,11 @@ if __name__ == '__main__':
         word_bidirectional=not args.word_unidirectional
     )
 
+
     optimizer = optim.Adam(ner.parameters(), lr=args.learning_rate)
     criterion = nn.CrossEntropyLoss()
 
+    print("training started...")
     # Training
     for epoch in range(args.epochs):
         ner.train()
