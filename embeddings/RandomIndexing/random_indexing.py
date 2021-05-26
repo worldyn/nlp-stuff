@@ -187,6 +187,7 @@ class RandomIndexing(object):
         # YOUR CODE HERE
         self.__cv = {}
         self.__rv = {}
+        # step1: build vocab
         for tok in self.__vocab:
             # ctx
             self.__cv[tok] = np.zeros(self.__dim)
@@ -197,6 +198,7 @@ class RandomIndexing(object):
             self.__rv[tok] = rw 
             #np.set_printoptions(threshold=sys.maxsize)
         
+        # step 2: create embeddings, adding ctx vectors 
         for linelist in self.text_gen():
             for i,fw in enumerate(linelist):
                 cw = np.zeros(self.__dim)
@@ -240,6 +242,7 @@ class RandomIndexing(object):
         if not words or len(words) < 1:
             return [None]
 
+        # get embeddings for the  words we are teting on
         X_test = []
         for tok in words:
             v = self.get_word_vector(tok)
@@ -249,6 +252,7 @@ class RandomIndexing(object):
 
         
         #X_train = np.zeros((len(self.__vocab), self.__dim
+        # get vectors for all embeddings to train KNN
         X_train = []
         idx_to_word = []
         for tok in self.__vocab:
@@ -265,8 +269,8 @@ class RandomIndexing(object):
         # infer neighbors
         tuplist = []
         dists, idxs = knn.kneighbors(X=X_test)
-        #print("d",dists)
-        #print("idx",idxs)
+
+        # add answers to return format
         for i in range(len(idxs)):
             l = []
             for j in range(k):

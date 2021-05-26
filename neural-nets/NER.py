@@ -185,52 +185,57 @@ class NERClassifier(nn.Module):
         for sentence in x:
             sen_l = []
             for word in sentence:
-                sen_l.append(self.w2i.get(word, unknown_idx))
+                sen_l.append(self.w2i.get(word, unknown_idx)) # word -> idx
                 if len(word) > MAXC:
                     MAXC = len(word)
             indexes.append(sen_l)
         indexes = torch.IntTensor(indexes)
-        word_embs = self.word_emb(indexes) 
+        word_embs = self.word_emb(indexes) # idxs -> word emb
         #print("glove word embs 3D: ",word_embs.shape)
 
         # get character embeddings
         char_embs = torch.empty(B, MAXS, MAXC, self.char_emb_size)
-        for sidx in range(B):
-            for widx in range(MAXS):
+        for sidx in range(B): # sentence
+            for widx in range(MAXS): # word
                 word = x[sidx][widx]
-                char_idxs = torch.empty(MAXC, dtype=torch.int)
-                for cidx in range(MAXC):
+                char_idxs = torch.empty(MAXC, dtype=torch.int) # init char idxs
+                for cidx in range(MAXC): # chars
                     if cidx < len(word):
-                        char = word[cidx]
+                        char = word[cidx] 
                     else:
                         char = '<UNK>'
-                    char_idx = self.c2i[char] 
+                    char_idx = self.c2i[char] # char -> idx
                     char_idxs[cidx] = char_idx
 
-                word_char_emb = self.char_emb(char_idxs)
-                char_embs[sidx,widx] = word_char_emb
+                word_char_emb = self.char_emb(char_idxs) # char idxs -> embeddings
+                char_embs[sidx,widx] = word_char_emb 
         #print("char embds 4D: ",char_embs.shape)
         
-        # change format for character GRU from 4D to 3D
+        # collapse dim for character GRU from 4D to 3D, (B x MAXS, MAXC, C)
         char_embs = torch.reshape(char_embs, (B * MAXS, MAXC, self.char_emb_size))
         #print("char embds 3D: ",char_embs.shape)
 
-        # character GRU stuff
+        # character GRU stuff, hid states , hid states (B x MAXS, C_hid)
         outs_char, h_fw_char, h_bw_char = self.char_birnn(char_embs)
         #print("hidden output char GRU (forward): ", h_fw_char.shape)
+
+        # concat last hid, (B x MAXS, C_hid)
         hid_char_cat = torch.cat((h_fw_char,h_bw_char), dim=1)
         #print("concated cGRU hid: ", hid_char_cat.shape)
+
+        # reshape back to be able to concat char and word lvl tensors
         hid_char_cat = torch.reshape(hid_char_cat, (B, MAXS, 2 * self.char_hidden_size))
         #print("cGRU hid 3D ", hid_char_cat.shape)
         #print("glove word embs 3D: ",word_embs.shape)
 
-        # concat word and character tensors 
+        # concat word and character tensors , (B, MAXS, 50 + 2*C_hid)
         concat = torch.cat((word_embs, hid_char_cat), dim=2)
         #print("word+char concat 3D: ",concat.shape)
 
         # word level GRU 
         outs, h_fw, h_bw = self.word_birnn(concat)
 
+        # linear layer
         return self.final_pred(outs)
         #return torch.zeros((len(x), len(x[0]), 2), requires_grad=True)
 

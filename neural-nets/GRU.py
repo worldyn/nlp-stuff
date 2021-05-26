@@ -104,23 +104,29 @@ class GRU2(nn.Module):
         # YOUR CODE HERE
         B, T, D = x.shape
 
+        # insert a constant vector first
         h_fw = Variable(torch.zeros(B,self.hidden_size), requires_grad=False)
+        # init gru outputs
         outs_fw = torch.empty(T,B,self.hidden_size)
 
+        # same for bidir
         if self.bidirectional:
             h_bw = Variable(torch.zeros(B,self.hidden_size), requires_grad=False)
             outs_bw = torch.empty(T,B,self.hidden_size)
         
+        # loop through GRUs
         for t_fw in range(T):
-            x_fw = x[:,t_fw,:] # x at time step t forward
-            h_fw = self.fw(x_fw, h_fw)
-            outs_fw[t_fw] = h_fw
+            # self.fw, self.bw: GRUs
+            x_fw = x[:,t_fw,:] # input x at time step t forward
+            h_fw = self.fw(x_fw, h_fw) 
+            outs_fw[t_fw] = h_fw # set to new current hid
             if self.bidirectional:
-                t_bw = T - 1 - t_fw
+                t_bw = T - 1 - t_fw # time step backwards
                 x_bw = x[:,t_bw,:] # x at time step t backward
-                h_bw = self.bw(x_bw, h_bw)
-                outs_bw[t_bw] = h_bw
+                h_bw = self.bw(x_bw, h_bw) 
+                outs_bw[t_bw] = h_bw # set no new current hid
 
+        # concat if bi-dir
         if self.bidirectional:
             outs_cat = torch.cat((outs_fw, outs_bw), dim=2)
             return outs_cat, h_fw, h_bw

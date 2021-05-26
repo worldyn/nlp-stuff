@@ -249,12 +249,14 @@ class Word2Vec(object):
                 #    ctxw = self.__i2w[cidx]
                 #    self.__pos_words[ctxw] = cidx
                 
+                wsum = 0
                 for cidx in contexts:
                     # gradients for logistic loss functions
                     w = self.__W[i] # focus vect
                     u = self.__U[:, cidx] # ctx vect
                     # sum for grads for focus word 
-                    self.__W[i] -= self.__lr * u * (self.sigmoid(np.dot(u, w)) - 1)
+                    #self.__W[i] -= self.__lr * u * (self.sigmoid(np.dot(u, w)) - 1)
+                    wsum -= u * (self.sigmoid(np.dot(u, w)) - 1)
                     # grads for positive word
                     self.__U[:,cidx] -= self.__lr * w * (self.sigmoid(np.dot(u, w)) - 1)
 
@@ -264,9 +266,12 @@ class Word2Vec(object):
                     for negidx in neg_words.values():
                         u_neg = self.__U[:,negidx]
                         # negative grads for focus
-                        self.__W[i] -= self.__lr * u_neg*self.sigmoid(np.dot(u_neg,w))
+                        wsum -= u_neg*self.sigmoid(np.dot(u_neg,w))
+                        #self.__W[i] -= self.__lr * u_neg*self.sigmoid(np.dot(u_neg,w))
                         # negative grads for context
                         self.__U[:,negidx] -= self.__lr * w * self.sigmoid(np.dot(u_neg,w))
+
+                    self.__W[i] += self.__lr * wsum
 
 
     def find_nearest(self, words, metric, k=5):
